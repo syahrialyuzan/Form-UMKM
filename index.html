@@ -79,9 +79,15 @@ a{color:var(--accent)}
 
     <div class="f">
       <label for="foto">Foto usaha <span class="opt">(boleh dikosongkan)</span></label>
-      <input id="foto" type="file" accept="image/*">
+      <div class="row">
+        <button type="button" id="fotocam">Ambil foto sekarang</button>
+        <button type="button" id="fotogal">Pilih dari galeri</button>
+        <button type="button" id="fotohapus" hidden>Hapus foto</button>
+      </div>
+      <input id="foto" type="file" accept="image/*" capture="environment" class="hp" tabindex="-1" aria-hidden="true">
+      <input id="fotog" type="file" accept="image/*" class="hp" tabindex="-1" aria-hidden="true">
       <img id="preview" alt="Pratinjau foto usaha">
-      <span class="hint">Foto akan diperkecil otomatis.</span>
+      <span class="hint">Foto akan diperkecil otomatis. Di HP, tombol pertama langsung membuka kamera.</span>
     </div>
 
     <label class="chk"><input type="checkbox" id="setuju" required> <span>Saya pemilik atau berwenang atas usaha ini dan setuju data di atas (termasuk nomor WhatsApp bila diisi) ditampilkan di peta umum.</span></label>
@@ -138,9 +144,15 @@ a{color:var(--accent)}
     }, function () { show("Lokasi tidak bisa diambil. Izinkan akses lokasi, atau ketuk peta untuk memilih.", "err"); }, { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 });
   });
 
-  $("foto").addEventListener("change", function () {
-    var f = this.files && this.files[0]; photo = ""; $("preview").style.display = "none";
+  $("fotocam").addEventListener("click", function () { $("foto").click(); });
+  $("fotogal").addEventListener("click", function () { $("fotog").click(); });
+  $("fotohapus").addEventListener("click", function () {
+    photo = ""; $("foto").value = ""; $("fotog").value = ""; $("preview").style.display = "none"; $("fotohapus").hidden = true;
+  });
+  function onPhoto() {
+    var f = this.files && this.files[0];
     if (!f) return;
+    photo = ""; $("preview").style.display = "none";
     if (!/^image\//.test(f.type)) { show("Berkas harus berupa gambar.", "err"); this.value = ""; return; }
     var url = URL.createObjectURL(f), img = new Image();
     img.onload = function () {
@@ -149,11 +161,13 @@ a{color:var(--accent)}
       c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
       photo = c.toDataURL("image/jpeg", 0.8);
       URL.revokeObjectURL(url);
-      $("preview").src = photo; $("preview").style.display = "block";
+      $("preview").src = photo; $("preview").style.display = "block"; $("fotohapus").hidden = false;
     };
     img.onerror = function () { show("Foto tidak bisa dibaca. Coba foto lain.", "err"); };
     img.src = url;
-  });
+  }
+  $("foto").addEventListener("change", onPhoto);
+  $("fotog").addEventListener("change", onPhoto);
 
   $("f").addEventListener("submit", function (e) {
     e.preventDefault();
@@ -171,7 +185,7 @@ a{color:var(--accent)}
       latitude: pos.lat, longitude: pos.lng, foto: photo, setuju: true, website: $("website").value
     });
     fetch(APPS_SCRIPT_URL, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: body }).then(function () {
-      $("f").reset(); photo = ""; $("preview").style.display = "none"; pos = null; $("coord").textContent = "Belum dipilih";
+      $("f").reset(); photo = ""; $("preview").style.display = "none"; $("fotohapus").hidden = true; pos = null; $("coord").textContent = "Belum dipilih";
       if (marker) { map.removeLayer(marker); marker = null; }
       show("Terima kasih! Data usaha Anda sudah terkirim dan menunggu pemeriksaan admin. Usaha akan tampil di peta setelah disetujui.", "okk");
       busy = false; $("kirim").disabled = false;
